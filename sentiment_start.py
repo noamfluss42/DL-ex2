@@ -394,20 +394,6 @@ if __name__ == "__main__":
                     f"Test Accuracy: {acc}"
                 )
 
-            if not run_recurrent and test_iter and epoch + 1 == num_epochs:  # Question 2 - print sub scores
-                print("start print_review")
-                nump_subs = sub_score.detach().numpy()
-                labels_argmax = labels.detach().numpy().argmax(axis=1)
-                nump_output_argmax = output.detach().numpy().argmax(axis=1)
-                idx_sec = np.where(labels_argmax == nump_output_argmax)[0][0]
-                sec_label = labels_argmax[idx_sec]
-                idx_fail = np.where(labels_argmax != nump_output_argmax)[0][0]
-                wrong_predict_label, real_label = nump_output_argmax[idx_fail], labels_argmax[idx_fail]
-                print_review(reviews_text[idx_sec], nump_subs[idx_sec, :, 0], nump_subs[idx_sec, :, 1], sec_label,
-                             sec_label)
-                print_review(reviews_text[idx_fail], nump_subs[idx_fail, :, 0], nump_subs[idx_fail, :, 1], real_label,
-                             wrong_predict_label)
-
         # saving the model
         torch.save(model, model.name() + ".pth")
 
@@ -415,5 +401,5 @@ if __name__ == "__main__":
     plot_acc(test_acc_list, model.name())
     print_test_accuracy(model, test_dataset, run_recurrent, atten_size)
 
-    print_sub_score_words(model, our_test_dataset)
+    print_sub_score_words(model, our_test_dataset)  # Question 2 - print sub scores MLP
     print('!')
