@@ -35,7 +35,7 @@ reload_model = False
 num_epochs = 2  # 10 is the original number
 learning_rate = 0.0001
 test_interval = 100
-
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # Loading sataset, use toy = True for obtaining a smaller dataset
 
 train_dataset, test_dataset, num_words, input_size = ld.get_data_set(batch_size)
@@ -129,8 +129,9 @@ class ExMLP(nn.Module):
         # Token-wise MLP network weights
         self.layer1 = MatMul(input_size, hidden_size)
         # additional layer(s)
+        self.layer2 = MatMul(hidden_size, 512)
 
-        self.layer2 = MatMul(hidden_size, output_size)
+        self.layer3 = MatMul(512, output_size)
 
     def name(self):
         return "MLP"
@@ -141,7 +142,7 @@ class ExMLP(nn.Module):
         x = self.layer1(x)
         x = self.ReLU(x)
         # rest
-        x = self.layer2(x)
+        x = self.layer3(x)
         x = self.sigmoid(x)
         return x
 
@@ -209,7 +210,7 @@ def print_review(rev_text, sbs1, sbs2, label, prediction):
     for word_index in range(20):
         sub_scores = np.round([sbs1[word_index], sbs2[word_index]],3)
         softmaxed_prediction = np.round(softmax(sub_scores),3)
-        print(f"word: '{rev_text[word_index]}', sub-scores:, {sub_scores}, softmaxed-prediction, {softmaxed_prediction}")
+        print(f"word: '{rev_text[word_index]}', sub-scores:, {sub_scores}") # Unclear softmaxed-prediction, {softmaxed_prediction}")
     print("final predicted label", prediction, "true label:", label)
 
 
@@ -278,7 +279,7 @@ if __name__ == "__main__":
 
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-
+    model.to(device)
     train_loss = 1.0
     test_loss = 1.0
 
@@ -303,7 +304,7 @@ if __name__ == "__main__":
             # Recurrent nets (RNN/GRU)
 
             if run_recurrent:
-                hidden_state = model.init_hidden(int(labels.shape[0]))
+                hidden_state = model.init_hidden(int(labels.shape[0])).to(device)
                 output = 0
                 for i in range(num_words):
                     output, hidden_state = model(reviews[:, i, :], hidden_state)  # HIDE
