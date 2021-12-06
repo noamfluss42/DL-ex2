@@ -133,3 +133,7 @@ dmypy.json
 /.idea
 .vector_cache
 .vector_cache/
+
+RNN.pth
+MLP.pth
+GRU.pth
