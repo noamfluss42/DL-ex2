@@ -198,6 +198,16 @@ def print_review(rev_text, sbs1, sbs2, lbl1, lbl2):
 
 # select model to use
 
+def get_accuracy_score(output: torch.tensor, labels: torch.tensor):
+    """
+    :param output: the model output, tensor[samples,labels]
+    :param labels: the original labels, tensor[samples,labels]
+    :return: accuracy score
+    """
+    output_array = output.numpy().argmax(axis=1)
+    labels_array = labels.numpy().argmax(axis=1)
+    return np.where(output_array == labels_array)[0].size / labels_array.size
+
 
 def plot_loss(train_losses, test_losses, model_name):
     plt.figure(figsize=(15, 8))
