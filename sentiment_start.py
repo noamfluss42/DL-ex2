@@ -29,7 +29,7 @@ hidden_size = 128  # to experiment with
 
 run_recurrent = False  # else run Token-wise MLP
 use_RNN = True  # otherwise GRU
-atten_size = 0  # atten > 0 means using restricted self atten
+atten_size = 5  # atten > 0 means using restricted self atten
 
 reload_model = False
 num_epochs = 2  # 10 is the original number
@@ -156,13 +156,14 @@ class ExLRestSelfAtten(nn.Module):
         self.sqrt_hidden_size = np.sqrt(float(hidden_size))
         self.ReLU = torch.nn.ReLU()
         self.softmax = torch.nn.Softmax(2)
-
+        self.sigmoid = torch.sigmoid
         # Token-wise MLP + Restricted Attention network implementation
 
         self.layer1 = MatMul(input_size, hidden_size)
         self.W_q = MatMul(hidden_size, hidden_size, use_bias=False)
         self.W_k = MatMul(hidden_size, hidden_size, use_bias=False)
-
+        self.W_v = MatMul(hidden_size, hidden_size, use_bias=False)
+        self.layer2 = MatMul(hidden_size, output_size)
         # rest ...
 
     def name(self):
@@ -192,13 +193,20 @@ class ExLRestSelfAtten(nn.Module):
         N = 128  # TODO change to 100?
         query = self.W_q(x_nei)
         keys = self.W_k(x_nei)
-        vals = x_nei
-        d = np.matmul(query, keys) / (N ** 0.5)
-        alpha = np.apply_along_axis(d, 2)
+        vals = self.W_v(x_nei)
 
-        # di =
+        query_view = query.view(x.shape[0] * 100, query.shape[2], query.shape[3])
+        keys_view = keys.view(x.shape[0] * 100, keys.shape[2], keys.shape[3])
+        vals_view = vals.view(x.shape[0] * 100, vals.shape[2], vals.shape[3])
 
-        return x, atten_weights
+        d = torch.bmm(query_view, torch.transpose(keys_view, 1, 2)) / (N ** 0.5)
+        alpha = self.softmax(d)
+        weighted_values = torch.bmm(alpha, vals_view)
+        output_view = torch.sum(weighted_values, 1)
+        output_atten = output_view.view(x.shape[0], 100, output_view.shape[1])
+        x = self.layer2(output_atten)
+        x = self.sigmoid(x)
+        return x, alpha
 
 
 # prints portion of the review (20-30 first words), with the sub-scores each work obtained
@@ -248,14 +256,29 @@ def plot_acc(test_acc, model_name):
     plt.show()
 
 
-def print_test_accuracy(model, test_dataset):
+def print_test_accuracy(model, test_dataset,run_recurrent,atten_size):
     acc = 0
     output = 0
     for labels, reviews, reviews_text in test_dataset:
-        test_hidden_state = model.init_hidden(int(labels.shape[0]))
-        for i in range(num_words):
-            output, test_hidden_state = model(reviews[:, i, :], test_hidden_state)
+        if run_recurrent:
+            test_hidden_state = model.init_hidden(int(labels.shape[0]))
+            for i in range(num_words):
+                output, test_hidden_state = model(reviews[:, i, :], test_hidden_state)
+        else:
+            sub_score = []
+            if atten_size > 0:
+                # MLP + atten
+                sub_score, atten_weights = model(reviews)
+            else:
+                # MLP
+                sub_score = model(reviews)
+
+            output = torch.mean(sub_score, 1)
         acc += get_accuracy_score(output, labels)
+        if not run_recurrent:
+            nump_subs = sub_score.detach().numpy()
+            labels = labels.detach().numpy()
+
     print(f"Final accuracy score = {acc / len(test_dataset)}")
 
 
@@ -369,5 +392,5 @@ if __name__ == "__main__":
 
     plot_loss(train_loss_list, test_loss_list, model.name())
     plot_acc(test_acc_list, model.name())
-    print_test_accuracy(model, test_dataset)
+    print_test_accuracy(model, test_dataset,run_recurrent,atten_size)
     print('!')
