@@ -22,14 +22,14 @@ os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'  # TODO delete
 
 batch_size = 32
 output_size = 2
-hidden_size = 128  # to experiment with
+hidden_size = 80  # to experiment with
 
-run_recurrent = False  # else run Token-wise MLP
-use_RNN = True  # otherwise GRU
+run_recurrent = True  # else run Token-wise MLP
+use_RNN = False  # otherwise GRU
 atten_size = 0  # atten > 0 means using restricted self atten
 
 reload_model = False
-num_epochs = 2  # 10 is the original number
+num_epochs = 3  # 10 is the original number
 learning_rate = 0.0001
 test_interval = 100
 
@@ -199,8 +199,8 @@ def print_review(rev_text, sbs1, sbs2, lbl1, lbl2):
     # implement
     print("start print_review")
     for word_index in range(len(rev_text)):
-        print("word:",rev_text[word_index],"sub-scores:["+str([sbs1[word_index],sbs2[word_index]]))
-        print("true label:",str([lbl1,lbl2]))
+        print("word:", rev_text[word_index], "sub-scores:[" + str([sbs1[word_index], sbs2[word_index]]))
+        print("true label:", str([lbl1, lbl2]))
 
 
 # select model to use
@@ -211,8 +211,8 @@ def get_accuracy_score(output: torch.tensor, labels: torch.tensor):
     :param labels: the original labels, tensor[samples,labels]
     :return: accuracy score
     """
-    output_array = output.numpy().argmax(axis=1)
-    labels_array = labels.numpy().argmax(axis=1)
+    output_array = output.detach().numpy().argmax(axis=1)
+    labels_array = labels.detach().numpy().argmax(axis=1)
     return np.where(output_array == labels_array)[0].size / labels_array.size
 
 
@@ -225,6 +225,27 @@ def plot_loss(train_losses, test_losses, model_name):
     plt.ylabel("Loss")
     plt.legend()
     plt.show()
+
+
+def plot_acc(test_acc, model_name):
+    plt.figure(figsize=(15, 8))
+    plt.title(f"Test Accuracy, model = {model_name}")
+    plt.plot(np.arange(len(test_acc)), test_acc, '-', linewidth=2, label="Test Accuracy")
+    plt.xlabel("Epochs")
+    plt.ylabel("Accuracy")
+    plt.legend()
+    plt.show()
+
+
+def print_test_accuracy(model, test_dataset):
+    acc = 0
+    output = 0
+    for labels, reviews, reviews_text in test_dataset:
+        test_hidden_state = model.init_hidden(int(labels.shape[0]))
+        for i in range(num_words):
+            output, test_hidden_state = model(reviews[:, i, :], test_hidden_state)
+        acc += get_accuracy_score(output, labels)
+    print(f"Final accuracy score = {acc / len(test_dataset)}")
 
 
 if __name__ == "__main__":
@@ -254,6 +275,7 @@ if __name__ == "__main__":
     # training steps in which a test step is executed every test_interval
     train_loss_list = []
     test_loss_list = []
+    test_acc_list = []
     for epoch in range(num_epochs):
 
         itr = 0  # iteration counter within each epoch
@@ -293,7 +315,6 @@ if __name__ == "__main__":
             # cross-entropy loss
 
             loss = criterion(output, labels)
-
             # optimize in training iterations
 
             if not test_iter:
@@ -306,6 +327,8 @@ if __name__ == "__main__":
                 test_loss = 0.8 * float(loss.detach()) + 0.2 * test_loss
                 train_loss_list.append(train_loss)
                 test_loss_list.append(test_loss)
+                acc = get_accuracy_score(output, labels)
+                test_acc_list.append(acc)
             else:
                 train_loss = 0.9 * float(loss.detach()) + 0.1 * train_loss
 
@@ -314,7 +337,8 @@ if __name__ == "__main__":
                     f"Epoch [{epoch + 1}/{num_epochs}], "
                     f"Step [{itr + 1}/{len(train_dataset)}], "
                     f"Train Loss: {train_loss:.4f}, "
-                    f"Test Loss: {test_loss:.4f}"
+                    f"Test Loss: {test_loss:.4f}, "
+                    f"Test Accuracy: {acc}"
                 )
 
                 if not run_recurrent:
@@ -326,4 +350,6 @@ if __name__ == "__main__":
                 torch.save(model, model.name() + ".pth")
 
     plot_loss(train_loss_list, test_loss_list, model.name())
+    plot_acc(test_acc_list, model.name())
+    print_test_accuracy(model, test_dataset)
     print('!')

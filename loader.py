@@ -13,7 +13,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 MAX_LENGTH = 100
 embedding_size = 100
-Train_size = 30000
+Train_size = 40000
 
 
 def review_clean(text):
@@ -78,9 +78,9 @@ def collact_batch(batch):
 ##########################
 
 my_test_texts = []
-my_test_texts.append(" this movie is very very bad ,the worst movie ")
-my_test_texts.append(" this movie is so great")
-my_test_texts.append("I really  liked the fish and animations the anther casting was not so good ")
+my_test_texts.append("This movie is very very bad ,the worst movie ")
+my_test_texts.append("This movie is so great")
+my_test_texts.append("I really  liked the fish and animations the anther casting was not so good")
 my_test_labels = ["neg", "pos", "pos"]
 
 
@@ -103,7 +103,7 @@ class ReviewDataset(torch.utils.data.Dataset):
         return X, y
 
 
-def get_data_set(batch_size, toy=False):
+def get_data_set(batch_size, toy=True):
     train_data, test_data = load_data_set(load_my_reviews=toy)
     train_dataloader = DataLoader(train_data, batch_size=batch_size,
                                   shuffle=True, collate_fn=collact_batch)
