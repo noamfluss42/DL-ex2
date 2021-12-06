@@ -39,6 +39,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # Loading sataset, use toy = True for obtaining a smaller dataset
 
 train_dataset, test_dataset, num_words, input_size = ld.get_data_set(batch_size)
+our_test_dataset = ld.get_our_test_data_set(batch_size)
 
 
 # Special matrix multipication layer (like torch.Linear but can operate on arbitrary sized
@@ -216,9 +217,10 @@ def print_review(rev_text, sbs1, sbs2, label, prediction):
     # implement #TODO smart coding
 
     for word_index in range(20):
-        sub_scores = np.round([sbs1[word_index], sbs2[word_index]],3)
-        softmaxed_prediction = np.round(softmax(sub_scores),3)
-        print(f"word: '{rev_text[word_index]}', sub-scores:, {sub_scores}") # Unclear softmaxed-prediction, {softmaxed_prediction}")
+        sub_scores = np.round([sbs1[word_index], sbs2[word_index]], 3)
+        softmaxed_prediction = np.round(softmax(sub_scores), 3)
+        print(
+            f"word: '{rev_text[word_index]}', sub-scores:, {sub_scores}")  # Unclear softmaxed-prediction, {softmaxed_prediction}")
     print("final predicted label", prediction, "true label:", label)
 
 
@@ -256,12 +258,12 @@ def plot_acc(test_acc, model_name):
     plt.show()
 
 
-def print_test_accuracy(model, test_dataset,run_recurrent,atten_size):
+def print_test_accuracy(model, test_dataset, run_recurrent, atten_size):
     acc = 0
     output = 0
     for labels, reviews, reviews_text in test_dataset:
         if run_recurrent:
-            test_hidden_state = model.init_hidden(int(labels.shape[0]))
+            test_hidden_state = model.init_hidden(int(labels.shape[0])).to(device)
             for i in range(num_words):
                 output, test_hidden_state = model(reviews[:, i, :], test_hidden_state)
         else:
@@ -280,6 +282,23 @@ def print_test_accuracy(model, test_dataset,run_recurrent,atten_size):
             labels = labels.detach().numpy()
 
     print(f"Final accuracy score = {acc / len(test_dataset)}")
+
+
+def print_sub_score_words(model, our_test_dataset):
+    for labels, reviews, reviews_text in our_test_dataset:
+        sub_score = model(reviews)
+        output = torch.mean(sub_score, 1)
+        print("start print_review")
+        nump_subs = sub_score.detach().numpy()
+        labels_argmax = labels.detach().numpy().argmax(axis=1)
+        nump_output_argmax = output.detach().numpy().argmax(axis=1)
+        idx_sec = np.where(labels_argmax == nump_output_argmax)[0][0]
+        sec_label = labels_argmax[idx_sec]
+        idx_fail = np.where(labels_argmax != nump_output_argmax)[0][0]
+        wrong_predict_label, real_label = nump_output_argmax[idx_fail], labels_argmax[idx_fail]
+        print_review(reviews_text[idx_sec], nump_subs[idx_sec, :, 0], nump_subs[idx_sec, :, 1], sec_label, sec_label)
+        print_review(reviews_text[idx_fail], nump_subs[idx_fail, :, 0], nump_subs[idx_fail, :, 1], real_label,
+                     wrong_predict_label)
 
 
 if __name__ == "__main__":
@@ -384,13 +403,17 @@ if __name__ == "__main__":
                 sec_label = labels_argmax[idx_sec]
                 idx_fail = np.where(labels_argmax != nump_output_argmax)[0][0]
                 wrong_predict_label, real_label = nump_output_argmax[idx_fail], labels_argmax[idx_fail]
-                print_review(reviews_text[idx_sec], nump_subs[idx_sec, :, 0], nump_subs[idx_sec, :, 1], sec_label, sec_label)
-                print_review(reviews_text[idx_fail], nump_subs[idx_fail, :, 0], nump_subs[idx_fail, :, 1], real_label, wrong_predict_label)
+                print_review(reviews_text[idx_sec], nump_subs[idx_sec, :, 0], nump_subs[idx_sec, :, 1], sec_label,
+                             sec_label)
+                print_review(reviews_text[idx_fail], nump_subs[idx_fail, :, 0], nump_subs[idx_fail, :, 1], real_label,
+                             wrong_predict_label)
 
         # saving the model
         torch.save(model, model.name() + ".pth")
 
     plot_loss(train_loss_list, test_loss_list, model.name())
     plot_acc(test_acc_list, model.name())
-    print_test_accuracy(model, test_dataset,run_recurrent,atten_size)
+    print_test_accuracy(model, test_dataset, run_recurrent, atten_size)
+
+    print_sub_score_words(model, our_test_dataset)
     print('!')
