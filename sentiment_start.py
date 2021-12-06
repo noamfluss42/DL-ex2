@@ -29,7 +29,7 @@ hidden_size = 128  # to experiment with
 
 run_recurrent = False  # else run Token-wise MLP
 use_RNN = True  # otherwise GRU
-atten_size = 5  # atten > 0 means using restricted self atten
+atten_size = 0  # atten > 0 means using restricted self atten
 
 reload_model = False
 num_epochs = 2  # 10 is the original number
@@ -192,8 +192,8 @@ class ExLRestSelfAtten(nn.Module):
         query = self.W_q(x_nei)
         keys = self.W_k(x_nei)
         vals = x_nei
-        d = np.matmul(query,keys)/(N**0.5)
-        alpha = np.apply_along_axis(d,2)
+        d = np.matmul(query, keys) / (N ** 0.5)
+        alpha = np.apply_along_axis(d, 2)
 
         # di =
 
@@ -203,14 +203,14 @@ class ExLRestSelfAtten(nn.Module):
 # prints portion of the review (20-30 first words), with the sub-scores each work obtained
 # prints also the final scores, the softmaxed prediction values and the true label values
 
-def print_review(rev_text, sbs1, sbs2, lbl1, lbl2):
+def print_review(rev_text, sbs1, sbs2, label, prediction):
     # implement #TODO smart coding
-    print("start print_review")
-    for word_index in range(1):
-        sub_scores = [sbs1[word_index],sbs2[word_index]]
-        softmaxed_prediction = softmax(sub_scores)
-        print("word:",rev_text[word_index],"sub-scores:",sub_scores,"softmaxed-prediction",softmaxed_prediction)
-    print("predicted label", np.argmax(expit([np.mean(sbs1),np.mean(sbs2)])), "true label:",np.argmax([lbl1,lbl2]))
+
+    for word_index in range(20):
+        sub_scores = np.round([sbs1[word_index], sbs2[word_index]],3)
+        softmaxed_prediction = np.round(softmax(sub_scores),3)
+        print(f"word: '{rev_text[word_index]}', sub-scores:, {sub_scores}, softmaxed-prediction, {softmaxed_prediction}")
+    print("final predicted label", prediction, "true label:", label)
 
 
 # select model to use
@@ -304,7 +304,7 @@ if __name__ == "__main__":
 
             if run_recurrent:
                 hidden_state = model.init_hidden(int(labels.shape[0]))
-
+                output = 0
                 for i in range(num_words):
                     output, hidden_state = model(reviews[:, i, :], hidden_state)  # HIDE
 
@@ -312,7 +312,6 @@ if __name__ == "__main__":
 
                 # Token-wise networks (MLP / MLP + Atten.)
 
-                sub_score = []
                 if atten_size > 0:
                     # MLP + atten
                     sub_score, atten_weights = model(reviews)
@@ -352,13 +351,20 @@ if __name__ == "__main__":
                     f"Test Accuracy: {acc}"
                 )
 
-                if not run_recurrent:
-                    nump_subs = sub_score.detach().numpy()
-                    labels = labels.detach().numpy()
-                    print_review(reviews_text[0], nump_subs[0, :, 0], nump_subs[0, :, 1], labels[0, 0], labels[0, 1])
+            if not run_recurrent and test_iter and epoch + 1 == num_epochs:  # Question 2 - print sub scores
+                print("start print_review")
+                nump_subs = sub_score.detach().numpy()
+                labels_argmax = labels.detach().numpy().argmax(axis=1)
+                nump_output_argmax = output.detach().numpy().argmax(axis=1)
+                idx_sec = np.where(labels_argmax == nump_output_argmax)[0][0]
+                sec_label = labels_argmax[idx_sec]
+                idx_fail = np.where(labels_argmax != nump_output_argmax)[0][0]
+                wrong_predict_label, real_label = nump_output_argmax[idx_fail], labels_argmax[idx_fail]
+                print_review(reviews_text[idx_sec], nump_subs[idx_sec, :, 0], nump_subs[idx_sec, :, 1], sec_label, sec_label)
+                print_review(reviews_text[idx_fail], nump_subs[idx_fail, :, 0], nump_subs[idx_fail, :, 1], real_label, wrong_predict_label)
 
-                # saving the model
-                torch.save(model, model.name() + ".pth")
+        # saving the model
+        torch.save(model, model.name() + ".pth")
 
     plot_loss(train_loss_list, test_loss_list, model.name())
     plot_acc(test_acc_list, model.name())
