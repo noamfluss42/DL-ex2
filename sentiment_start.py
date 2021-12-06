@@ -34,7 +34,7 @@ atten_size = 5  # atten > 0 means using restricted self atten
 reload_model = False
 num_epochs = 2  # 10 is the original number
 learning_rate = 0.0001
-test_interval = 50
+test_interval = 100
 
 # Loading sataset, use toy = True for obtaining a smaller dataset
 
@@ -192,8 +192,8 @@ class ExLRestSelfAtten(nn.Module):
         query = self.W_q(x_nei)
         keys = self.W_k(x_nei)
         vals = x_nei
-        d = np.matmul(query, keys) / (N ** 0.5)
-        alpha = np.apply_along_axis(d, 2)
+        d = np.matmul(query,keys)/(N**0.5)
+        alpha = np.apply_along_axis(d,2)
 
         # di =
 
@@ -206,9 +206,11 @@ class ExLRestSelfAtten(nn.Module):
 def print_review(rev_text, sbs1, sbs2, lbl1, lbl2):
     # implement #TODO smart coding
     print("start print_review")
-    for word_index in range(len(rev_text)):
-        print("word:", rev_text[word_index], "sub-scores:[" + str([sbs1[word_index], sbs2[word_index]]))
-        print("true label:", str([lbl1, lbl2]))
+    for word_index in range(1):
+        sub_scores = [sbs1[word_index],sbs2[word_index]]
+        softmaxed_prediction = softmax(sub_scores)
+        print("word:",rev_text[word_index],"sub-scores:",sub_scores,"softmaxed-prediction",softmaxed_prediction)
+    print("predicted label", np.argmax(expit([np.mean(sbs1),np.mean(sbs2)])), "true label:",np.argmax([lbl1,lbl2]))
 
 
 # select model to use
@@ -323,6 +325,7 @@ if __name__ == "__main__":
             # cross-entropy loss
 
             loss = criterion(output, labels)
+
             # optimize in training iterations
 
             if not test_iter:
