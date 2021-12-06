@@ -30,6 +30,12 @@ def tokinize(s):
     return splited[:MAX_LENGTH]
 
 
+def load_our_test_reviews():
+    test_data = pd.DataFrame({"review": my_test_texts, "sentiment": my_test_labels})
+    test_iter = ReviewDataset(test_data["review"], test_data["sentiment"])
+    return test_iter
+
+
 def load_data_set(load_my_reviews=False):
     data = pd.read_csv("IMDB Dataset.csv")
     train_data = data[:Train_size]
@@ -110,3 +116,10 @@ def get_data_set(batch_size, toy=True):
     test_dataloader = DataLoader(test_data, batch_size=batch_size,
                                  shuffle=True, collate_fn=collact_batch)
     return train_dataloader, test_dataloader, MAX_LENGTH, embedding_size
+
+
+def get_our_test_data_set(batch_size):
+    test_data = load_our_test_reviews()
+    test_dataloader = DataLoader(test_data, batch_size=batch_size,
+                                 shuffle=True, collate_fn=collact_batch)
+    return test_dataloader
