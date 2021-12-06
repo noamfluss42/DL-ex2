@@ -24,13 +24,13 @@ batch_size = 32
 output_size = 2
 hidden_size = 128  # to experiment with
 
-run_recurrent = True  # else run Token-wise MLP
+run_recurrent = False  # else run Token-wise MLP
 use_RNN = True  # otherwise GRU
 atten_size = 0  # atten > 0 means using restricted self atten
 
 reload_model = False
-num_epochs = 10  # 10 is the original number
-learning_rate = 0.001
+num_epochs = 2  # 10 is the original number
+learning_rate = 0.0001
 test_interval = 100
 
 # Loading sataset, use toy = True for obtaining a smaller dataset
@@ -99,6 +99,7 @@ class ExGRU(nn.Module):
         self.zt_linear = nn.Linear(input_size + hidden_size, hidden_size)
         self.rt_linear = nn.Linear(input_size + hidden_size, hidden_size)
         self.ht_tilda_linear = nn.Linear(input_size + hidden_size, hidden_size)
+        self.hidden_to_output = nn.Linear(hidden_size, output_size)
 
     def name(self):
         return "GRU"
@@ -108,12 +109,11 @@ class ExGRU(nn.Module):
         zt = self.sigmoid(self.zt_linear(torch.cat((hidden_state, x), 1)))
         rt = self.sigmoid(self.rt_linear(torch.cat((hidden_state, x), 1)))
         ht_tilda = self.tanh(self.ht_tilda_linear(torch.cat((rt * hidden_state, x), 1)))
-        ht = (1 - zt) * hidden_state + zt * ht_tilda
-
-        return ht, ht
+        new_hidden = (1 - zt) * hidden_state + zt * ht_tilda
+        output = self.sigmoid(self.hidden_to_output(new_hidden))
+        return output, new_hidden
 
     def init_hidden(self, batch_size):
-        print("gru batch_size",batch_size)
         return torch.zeros(batch_size, self.hidden_size)
 
 
@@ -122,10 +122,12 @@ class ExMLP(nn.Module):
         super(ExMLP, self).__init__()
 
         self.ReLU = torch.nn.ReLU()
-
+        self.sigmoid = torch.sigmoid
         # Token-wise MLP network weights
         self.layer1 = MatMul(input_size, hidden_size)
         # additional layer(s)
+
+        self.layer2 = MatMul(hidden_size, output_size)
 
     def name(self):
         return "MLP"
@@ -136,7 +138,8 @@ class ExMLP(nn.Module):
         x = self.layer1(x)
         x = self.ReLU(x)
         # rest
-
+        x = self.layer2(x)
+        x = self.sigmoid(x)
         return x
 
 
@@ -154,6 +157,7 @@ class ExLRestSelfAtten(nn.Module):
 
         self.layer1 = MatMul(input_size, hidden_size)
         self.W_q = MatMul(hidden_size, hidden_size, use_bias=False)
+
         # rest ...
 
     def name(self):
@@ -193,7 +197,10 @@ class ExLRestSelfAtten(nn.Module):
 
 def print_review(rev_text, sbs1, sbs2, lbl1, lbl2):
     # implement
-    print('!')
+    print("start print_review")
+    for word_index in range(len(rev_text)):
+        print("word:",rev_text[word_index],"sub-scores:["+str([sbs1[word_index],sbs2[word_index]]))
+        print("true label:",str([lbl1,lbl2]))
 
 
 # select model to use
