@@ -7,6 +7,9 @@
 ########################################################################
 import os
 import torch
+from scipy.special import softmax
+from scipy.special import expit
+
 from torch.nn.functional import pad
 import torch.nn as nn
 import numpy as np
@@ -24,13 +27,13 @@ batch_size = 32
 output_size = 2
 hidden_size = 128  # to experiment with
 
-run_recurrent = True  # else run Token-wise MLP
-use_RNN = False  # otherwise GRU
-atten_size = 0  # atten > 0 means using restricted self atten
+run_recurrent = False  # else run Token-wise MLP
+use_RNN = True  # otherwise GRU
+atten_size = 5  # atten > 0 means using restricted self atten
 
 reload_model = False
-num_epochs = 3  # 10 is the original number
-learning_rate = 0.00001
+num_epochs = 2  # 10 is the original number
+learning_rate = 0.0001
 test_interval = 50
 
 # Loading sataset, use toy = True for obtaining a smaller dataset
@@ -157,6 +160,7 @@ class ExLRestSelfAtten(nn.Module):
 
         self.layer1 = MatMul(input_size, hidden_size)
         self.W_q = MatMul(hidden_size, hidden_size, use_bias=False)
+        self.W_k = MatMul(hidden_size, hidden_size, use_bias=False)
 
         # rest ...
 
@@ -184,10 +188,14 @@ class ExLRestSelfAtten(nn.Module):
         # x_nei has an additional axis that corresponds to the offset
 
         # Applying attention layer
+        N = 128 # TODO change to 100?
+        query = self.W_q(x_nei)
+        keys = self.W_k(x_nei)
+        vals = x_nei
+        d = np.matmul(query,keys)/(N**0.5)
+        alpha = np.apply_along_axis(d,2)
 
-        # query = ...
-        # keys = ...
-        # vals = ...
+        #di =
 
         return x, atten_weights
 
@@ -196,7 +204,7 @@ class ExLRestSelfAtten(nn.Module):
 # prints also the final scores, the softmaxed prediction values and the true label values
 
 def print_review(rev_text, sbs1, sbs2, lbl1, lbl2):
-    # implement
+    # implement #TODO smart coding
     print("start print_review")
     for word_index in range(len(rev_text)):
         print("word:", rev_text[word_index], "sub-scores:[" + str([sbs1[word_index], sbs2[word_index]]))
