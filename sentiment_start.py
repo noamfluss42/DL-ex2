@@ -188,14 +188,14 @@ class ExLRestSelfAtten(nn.Module):
         # x_nei has an additional axis that corresponds to the offset
 
         # Applying attention layer
-        N = 128 # TODO change to 100?
+        N = 128  # TODO change to 100?
         query = self.W_q(x_nei)
         keys = self.W_k(x_nei)
         vals = x_nei
-        d = np.matmul(query,keys)/(N**0.5)
-        alpha = np.apply_along_axis(d,2)
+        d = np.matmul(query, keys) / (N ** 0.5)
+        alpha = np.apply_along_axis(d, 2)
 
-        #di =
+        # di =
 
         return x, atten_weights
 
