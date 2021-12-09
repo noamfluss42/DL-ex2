@@ -256,7 +256,7 @@ def plot_acc(test_acc, model_name):
     plt.show()
 
 
-def get_test_accuracy(model, test_dataset, run_recurrent, atten_size,num_words):
+def get_test_accuracy(model, test_dataset, run_recurrent, atten_size, num_words):
     acc = 0
     output = 0
     for labels, reviews, reviews_text in test_dataset:
@@ -427,8 +427,9 @@ def run_by_architecture(train_dataset, test_dataset, num_words, our_test_dataset
                                                            run_recurrent, atten_size, model, criterion, optimizer)
     plot_loss(train_loss_list, test_loss_list, model.name())
     plot_acc(test_acc_list, model.name())
-    print(f"Final accuracy score = {get_test_accuracy(model, test_dataset, run_recurrent, atten_size,num_words)}")
-    print_sub_score_words(model, our_test_dataset)  # Question 2 - print sub scores MLP
+    print(f"Final accuracy score = {get_test_accuracy(model, test_dataset, run_recurrent, atten_size, num_words)}")
+    if not run_recurrent:
+        print_sub_score_words(model, our_test_dataset, atten_size)  # Question 2 - print sub scores MLP
 
 
 def main():
@@ -445,6 +446,7 @@ def main():
     our_test_dataset = ld.get_our_test_data_set(batch_size)
 
     layers_activations = (torch.nn.ReLU(), torch.nn.ReLU(), torch.nn.ReLU(), torch.sigmoid)
+
     atten_layer_index = 1
     # for hidden_size in [64]:
     #     layers_dim = (100, hidden_size, 256, 2),
@@ -477,10 +479,5 @@ def main():
 
 
 if __name__ == "__main__":
-    config = {
-        "learning_rate": learning_rate,
-        "epochs": num_epochs,
-        "batch_size": batch_size
-    }
     # wandb.init(project="DL-ex2", entity="noam-fluss", config=config)
     main()
