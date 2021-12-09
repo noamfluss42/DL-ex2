@@ -23,16 +23,16 @@ plt.style.use('ggplot')
 matplotlib.rcParams['font.size'] = 14
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'  # TODO delete
 
-batch_size = 32
+batch_size = 64
 output_size = 2
 hidden_size = 128  # to experiment with
 
 run_recurrent = False  # else run Token-wise MLP
 use_RNN = True  # otherwise GRU
-atten_size = 5  # atten > 0 means using restricted self atten
+atten_size = 0  # atten > 0 means using restricted self atten
 
 reload_model = False
-num_epochs = 2  # 10 is the original number
+num_epochs = 1  # 10 is the original number
 learning_rate = 0.0001
 test_interval = 100
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -130,9 +130,9 @@ class ExMLP(nn.Module):
         # Token-wise MLP network weights
         self.layer1 = MatMul(input_size, hidden_size)
         # additional layer(s)
-        self.layer2 = MatMul(hidden_size, 512)
+        self.layer2 = MatMul(hidden_size, 256)
 
-        self.layer3 = MatMul(512, output_size)
+        self.layer3 = MatMul(256, output_size)
 
     def name(self):
         return "MLP"
@@ -140,11 +140,10 @@ class ExMLP(nn.Module):
     def forward(self, x):
         # Token-wise MLP network implementation
 
-        x = self.layer1(x)
-        x = self.ReLU(x)
+        x = self.ReLU(self.layer1(x))
         # rest
-        x = self.layer3(x)
-        x = self.sigmoid(x)
+        x = self.ReLU(self.layer2(x))
+        x = self.sigmoid(self.layer3(x))
         return x
 
 
@@ -200,7 +199,7 @@ class ExLRestSelfAtten(nn.Module):
         keys_view = keys.view(x.shape[0] * 100, keys.shape[2], keys.shape[3])
         vals_view = vals.view(x.shape[0] * 100, vals.shape[2], vals.shape[3])
 
-        d = torch.bmm(query_view, torch.transpose(keys_view, 1, 2)) / (N ** 0.5)
+        d = torch.bmm(query_view, torch.transpose(keys_view, 1, 2)) / self.sqrt_hidden_size
         alpha = self.softmax(d)
         weighted_values = torch.bmm(alpha, vals_view)
         output_view = torch.sum(weighted_values, 1)
@@ -216,7 +215,7 @@ class ExLRestSelfAtten(nn.Module):
 def print_review(rev_text, sbs1, sbs2, label, prediction):
     # implement #TODO smart coding
 
-    for word_index in range(20):
+    for word_index in range(len(rev_text)):
         sub_scores = np.round([sbs1[word_index], sbs2[word_index]], 3)
         softmaxed_prediction = np.round(softmax(sub_scores), 3)
         print(
@@ -292,13 +291,15 @@ def print_sub_score_words(model, our_test_dataset):
         nump_subs = sub_score.detach().numpy()
         labels_argmax = labels.detach().numpy().argmax(axis=1)
         nump_output_argmax = output.detach().numpy().argmax(axis=1)
-        idx_sec = np.where(labels_argmax == nump_output_argmax)[0][0]
-        sec_label = labels_argmax[idx_sec]
-        idx_fail = np.where(labels_argmax != nump_output_argmax)[0][0]
-        wrong_predict_label, real_label = nump_output_argmax[idx_fail], labels_argmax[idx_fail]
-        print_review(reviews_text[idx_sec], nump_subs[idx_sec, :, 0], nump_subs[idx_sec, :, 1], sec_label, sec_label)
-        print_review(reviews_text[idx_fail], nump_subs[idx_fail, :, 0], nump_subs[idx_fail, :, 1], real_label,
-                     wrong_predict_label)
+        print(f"labels_argmax = {labels_argmax}\noutput_argmax = {nump_output_argmax}")
+        idx_first = 0
+        first_predict, first_label = labels_argmax[idx_first],labels_argmax[idx_first]
+        idx_second = 1
+        second_predict, second_label = nump_output_argmax[idx_second], labels_argmax[idx_second]
+        print_review(reviews_text[idx_first], nump_subs[idx_first, :, 0], nump_subs[idx_first, :, 1], first_label, first_predict)
+        print()
+        print_review(reviews_text[idx_second], nump_subs[idx_second, :, 0], nump_subs[idx_second, :, 1], second_label,
+                     second_predict)
 
 
 if __name__ == "__main__":
@@ -317,7 +318,7 @@ if __name__ == "__main__":
 
     if reload_model:
         print("Reloading model")
-        model.load_state_dict(torch.load(model.name() + ".pth"))
+        model = torch.load(model.name() + ".pth")
 
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)

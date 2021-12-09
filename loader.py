@@ -84,10 +84,9 @@ def collact_batch(batch):
 ##########################
 
 my_test_texts = []
-my_test_texts.append("This movie is very very bad ,the worst movie ")
-my_test_texts.append("This movie is so great")
-my_test_texts.append("I really  liked the fish and animations the anther casting was not so good")
-my_test_labels = ["neg", "pos", "pos"]
+my_test_texts.append("This movie is very very bad ,the worst movie")
+my_test_texts.append("We can not say that this movie is not good, but it's not for kids though")
+my_test_labels = ["negative", "positive"]
 
 
 ##########################
@@ -120,6 +119,6 @@ def get_data_set(batch_size, toy=True):
 
 def get_our_test_data_set(batch_size):
     test_data = load_our_test_reviews()
-    test_dataloader = DataLoader(test_data, batch_size=batch_size,
-                                 shuffle=True, collate_fn=collact_batch)
+    test_dataloader = DataLoader(test_data, batch_size=2,
+                                 shuffle=False, collate_fn=collact_batch)
     return test_dataloader
