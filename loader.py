@@ -85,7 +85,9 @@ def collact_batch(batch):
 
 my_test_texts = []
 my_test_texts.append("This movie is very very bad ,the worst movie")
-my_test_texts.append("We can not say that this movie is not good, but it's not for kids though")
+my_test_texts.append("We can not say that this movie is bad, but it's not for kids though."
+                     "I expect horror movies to scare me, and this movie is really scary."
+                     "Although movie critics would hate this movie, as a horror movie it does the job.")
 my_test_labels = ["negative", "positive"]
 
 
