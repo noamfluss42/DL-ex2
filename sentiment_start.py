@@ -13,7 +13,6 @@ from scipy.special import expit
 from torch.nn.functional import pad
 import torch.nn as nn
 import numpy as np
-
 import loader as ld
 import pandas as pd
 import matplotlib
@@ -428,52 +427,64 @@ def run_by_architecture(train_dataset, test_dataset, num_words, our_test_dataset
         print_sub_score_words(model, our_test_dataset, atten_size)  # Question 2 - print sub scores MLP
 
 
-def main():
+def main(run_recurrent_param, change_layer=False,atten_size = 5):
     learning_rate = 0.0001
-    num_epochs = 1  # 10 is the original number
+    num_epochs = 10  # 10 is the original number
+
     batch_size = 64
-    run_recurrent = False  # else run Token-wise MLP
+
+    run_recurrent = run_recurrent_param  # else run Token-wise MLP
     use_RNN = True  # otherwise GRU
-    atten_size = 5  # atten > 0 means using restricted self atten
+    # atten > 0 means using restricted self atten
+    layers_activations = (torch.nn.ReLU(), torch.nn.ReLU(), torch.sigmoid)
+    atten_layer_index = 1
 
     train_dataset, test_dataset, num_words, input_size = ld.get_data_set(batch_size)
-    our_test_dataset = ld.get_our_test_data_set(batch_size)
+    our_test_dataset = ld.get_our_test_data_set()
 
-    layers_activations = (torch.nn.ReLU(), torch.nn.ReLU(), torch.nn.ReLU(), torch.sigmoid)
+    for hidden_size in [64,96,128]:
+        layers_dim = (100, hidden_size, 256, 2)
+        if change_layer:
+            layers_dim = (100, hidden_size, 256, 64, 2)
+            layers_activations = (torch.nn.ReLU(), torch.nn.ReLU(), torch.nn.Tanh(), torch.sigmoid)
+        config = {
+            "learning_rate": learning_rate,
+            "epochs": num_epochs,
+            "batch_size": batch_size,
+            "run_recurrent": run_recurrent,
+            "use_RNN": use_RNN,
+        }
 
-    atten_layer_index = 1
-    # for hidden_size in [64]:
-    #     layers_dim = (100, hidden_size, 256, 2),
-    #     config = {
-    #         "learning_rate": learning_rate,
-    #         "epochs": num_epochs,
-    #         "batch_size": batch_size,
-    #         "run_recurrent": run_recurrent,
-    #         "use_RNN": use_RNN,
-    #         "attention_after_layer": atten_layer_index,
-    #         "layer1_size": layers_dim[0],
-    #         "layer1_activation": "RELU",
-    #         "layer2_size": layers_dim[1],
-    #         "layer2_activation": "RELU",
-    #         "layer3_size": layers_dim[2],
-    #         "layer3_activation": "RELU",
-    #         "layer4_size": layers_dim[3],
-    #         "layer4_activation": "sigmoid",
-    #     }
-    #     wandb.init(project="DL-ex2_with_documentation_delete", entity="noam-fluss", config=config)
-    run_by_architecture(train_dataset, test_dataset, num_words, our_test_dataset,
-                        learning_rate,
-                        num_epochs,
-                        run_recurrent,
-                        use_RNN,
-                        atten_size,
-                        layers_dim,
-                        layers_activations,
-                        atten_layer_index)
+        if not run_recurrent:
+            config["atten_layer_index"] = atten_layer_index
+            for i in range(0, len(layers_dim)):
+                config["layer" + str(i + 1) + "_size"] = layers_dim[i]
+                if i != 0:
+                    config["layer" + str(i + 1) + "activation"] = str(layers_activations[i - 1])
+        else:
+            config["hidden_size"] = hidden_size
+        if not run_recurrent:
+            if atten_size == 0:
+                config["model name"] = "MLP"
+            else:
+                config["model name"] = "MLP_atten"
+        else:
+            if use_RNN:
+                config["model name"] = "RNN"
+            else:
+                config["model name"] = "GRU"
+        wandb.init(project="temp1", entity="noam-fluss", config=config)
+        run_by_architecture(train_dataset, test_dataset, num_words, our_test_dataset,
+                                    learning_rate,
+                                    num_epochs,
+                                    run_recurrent,
+                                    use_RNN,
+                                    atten_size,
+                                    layers_dim,
+                                    layers_activations,
+                                    atten_layer_index)
 
 
 if __name__ == "__main__":
     # wandb.init(project="DL-ex2", entity="noam-fluss", config=config)
-    # main()
-    z = ld.get_our_test_data_set()
-    print('!')
+    main(False)
