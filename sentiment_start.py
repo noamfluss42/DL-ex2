@@ -165,7 +165,7 @@ class ExLRestSelfAtten(nn.Module):
         self.layers = nn.ModuleList(self.layers)
 
     def name(self):
-        return "MLP_atten"
+            return "MLP_atten"
 
     def forward(self, x):
         # Token-wise MLP + Restricted Attention network implementation
@@ -435,9 +435,7 @@ def run_by_architecture(train_dataset, test_dataset, num_words, our_test_dataset
 def main():
     learning_rate = 0.0001
     num_epochs = 1  # 10 is the original number
-
     batch_size = 64
-
     run_recurrent = False  # else run Token-wise MLP
     use_RNN = True  # otherwise GRU
     atten_size = 5  # atten > 0 means using restricted self atten
