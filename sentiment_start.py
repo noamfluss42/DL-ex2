@@ -165,7 +165,7 @@ class ExLRestSelfAtten(nn.Module):
         self.layers = nn.ModuleList(self.layers)
 
     def name(self):
-            return "MLP_atten"
+        return "MLP_atten"
 
     def forward(self, x):
         # Token-wise MLP + Restricted Attention network implementation
@@ -427,7 +427,7 @@ def run_by_architecture(train_dataset, test_dataset, num_words, our_test_dataset
         print_sub_score_words(model, our_test_dataset, atten_size)  # Question 2 - print sub scores MLP
 
 
-def main(run_recurrent_param, change_layer=False,atten_size = 5):
+def main(run_recurrent_param, change_layer=False, atten_size=5):
     learning_rate = 0.0001
     num_epochs = 10  # 10 is the original number
 
@@ -442,7 +442,7 @@ def main(run_recurrent_param, change_layer=False,atten_size = 5):
     train_dataset, test_dataset, num_words, input_size = ld.get_data_set(batch_size)
     our_test_dataset = ld.get_our_test_data_set()
 
-    for hidden_size in [64,96,128]:
+    for hidden_size in [64, 96, 128]:
         layers_dim = (100, hidden_size, 256, 2)
         if change_layer:
             layers_dim = (100, hidden_size, 256, 64, 2)
@@ -475,14 +475,14 @@ def main(run_recurrent_param, change_layer=False,atten_size = 5):
                 config["model name"] = "GRU"
         wandb.init(project="temp1", entity="noam-fluss", config=config)
         run_by_architecture(train_dataset, test_dataset, num_words, our_test_dataset,
-                                    learning_rate,
-                                    num_epochs,
-                                    run_recurrent,
-                                    use_RNN,
-                                    atten_size,
-                                    layers_dim,
-                                    layers_activations,
-                                    atten_layer_index)
+                            learning_rate,
+                            num_epochs,
+                            run_recurrent,
+                            use_RNN,
+                            atten_size,
+                            layers_dim,
+                            layers_activations,
+                            atten_layer_index)
 
 
 if __name__ == "__main__":
