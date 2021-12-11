@@ -61,6 +61,12 @@ def preprocess_review(s):
     return torch.unsqueeze(embadded, 0)
 
 
+def preprocess_review_test(s):
+    cleaned = tokinize(s)
+    embadded = embadding.get_vecs_by_tokens(cleaned)
+    return torch.unsqueeze(embadded, 0)
+
+
 def preprocess_label(label):
     return [0.0, 1.0] if label == "negative" else [1.0, 0.0]
 
@@ -79,15 +85,27 @@ def collact_batch(batch):
     return label_list.to(device), embadding_tensor.to(device), review_list
 
 
+def collact_batch_test(batch):
+    label_list = []
+    review_list = []
+    embadding_list = []
+    for review, label in batch:
+        label_list.append(preprocess_label(label))  # label
+        review_list.append(tokinize(review))  # the actuall review
+        processed_review = preprocess_review_test(review).detach()
+        embadding_list.append(processed_review)  # the embedding vectors
+    label_list = torch.tensor(label_list, dtype=torch.float32).reshape((-1, 2))
+    embadding_tensor = torch.cat(embadding_list)
+    return label_list.to(device), embadding_tensor.to(device), review_list
+
+
 ##########################
 # ADD YOUR OWN TEST TEXT #
 ##########################
 
 my_test_texts = []
 my_test_texts.append("This movie is very very bad ,the worst movie")
-my_test_texts.append("We can not say that this movie is bad, but it's not for kids though."
-                     "I expect horror movies to scare me, and this movie is really scary."
-                     "Although movie critics would hate this movie, as a horror movie it does the job.")
+my_test_texts.append("We can not say that this movie is bad, but it's not for kids though.")
 my_test_labels = ["negative", "positive"]
 
 
@@ -119,8 +137,8 @@ def get_data_set(batch_size, toy=True):
     return train_dataloader, test_dataloader, MAX_LENGTH, embedding_size
 
 
-def get_our_test_data_set(batch_size):
+def get_our_test_data_set():
     test_data = load_our_test_reviews()
-    test_dataloader = DataLoader(test_data, batch_size=2,
-                                 shuffle=False, collate_fn=collact_batch)
+    test_dataloader = DataLoader(test_data, batch_size=1,
+                                 shuffle=False, collate_fn=collact_batch_test)
     return test_dataloader

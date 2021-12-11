@@ -13,6 +13,7 @@ from scipy.special import expit
 from torch.nn.functional import pad
 import torch.nn as nn
 import numpy as np
+
 import loader as ld
 import pandas as pd
 import matplotlib
@@ -211,14 +212,13 @@ class ExLRestSelfAtten(nn.Module):
 # prints portion of the review (20-30 first words), with the sub-scores each work obtained
 # prints also the final scores, the softmaxed prediction values and the true label values
 
-def print_review(rev_text, sbs1, sbs2, label, prediction):
+def print_review(rev_text, sbs1, label, prediction):
     # implement #TODO smart coding
 
     for word_index in range(len(rev_text)):
-        sub_scores = np.round([sbs1[word_index], sbs2[word_index]], 3)
-        softmaxed_prediction = np.round(softmax(sub_scores), 3)
+        sub_scores = np.round(sbs1[word_index], 3)
         print(
-            f"word: '{rev_text[word_index]}', sub-scores:, {sub_scores}")  # Unclear softmaxed-prediction, {softmaxed_prediction}")
+            f"word: '{rev_text[word_index]}', sub-scores:, {sub_scores}")
     print("final predicted label", prediction, "true label:", label)
 
 
@@ -281,25 +281,21 @@ def get_test_accuracy(model, test_dataset, run_recurrent, atten_size, num_words)
 
 def print_sub_score_words(model, our_test_dataset, atten_size):
     for labels, reviews, reviews_text in our_test_dataset:
+
         if atten_size > 0:
             sub_score, atten_weights = model(reviews)
         else:
             sub_score = model(reviews)
+        print(sub_score.shape)
         output = torch.mean(sub_score, 1)
         print("start print_review")
         nump_subs = sub_score.cpu().detach().numpy()
+        print(nump_subs.shape)
         labels_argmax = labels.cpu().detach().numpy().argmax(axis=1)
         nump_output_argmax = output.cpu().detach().numpy().argmax(axis=1)
         print(f"labels_argmax = {labels_argmax}\noutput_argmax = {nump_output_argmax}")
-        idx_first = 0
-        first_predict, first_label = labels_argmax[idx_first], labels_argmax[idx_first]
-        idx_second = 1
-        second_predict, second_label = nump_output_argmax[idx_second], labels_argmax[idx_second]
-        print_review(reviews_text[idx_first], nump_subs[idx_first, :, 0], nump_subs[idx_first, :, 1], first_label,
-                     first_predict)
-        print()
-        print_review(reviews_text[idx_second], nump_subs[idx_second, :, 0], nump_subs[idx_second, :, 1], second_label,
-                     second_predict)
+        first_predict, first_label = nump_output_argmax[0], labels_argmax[0]
+        print_review(reviews_text[0], nump_subs[0, :, :], first_label, first_predict)
 
 
 def choose_model(run_recurrent, use_RNN, atten_size, layers_dim, layers_activations, atten_layer_index):
@@ -480,4 +476,6 @@ def main():
 
 if __name__ == "__main__":
     # wandb.init(project="DL-ex2", entity="noam-fluss", config=config)
-    main()
+    # main()
+    z = ld.get_our_test_data_set()
+    print('!')
