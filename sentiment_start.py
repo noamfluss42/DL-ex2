@@ -165,7 +165,7 @@ class ExLRestSelfAtten(nn.Module):
         self.layers = nn.ModuleList(self.layers)
 
     def name(self):
-            return "MLP_atten"
+        return "MLP_atten"
 
     def forward(self, x):
         # Token-wise MLP + Restricted Attention network implementation
@@ -175,7 +175,6 @@ class ExLRestSelfAtten(nn.Module):
 
         # generating x in offsets between -atten_size and atten_size
         # with zero padding at the ends
-
         padded = pad(x, (0, 0, self.atten_size, self.atten_size, 0, 0))
 
         x_nei = []
@@ -191,16 +190,16 @@ class ExLRestSelfAtten(nn.Module):
         query = self.W_q(x_nei)
         keys = self.W_k(x_nei)
         vals = self.W_v(x_nei)
+        query_view = query.view(query.shape[0] * query.shape[1], query.shape[2], query.shape[3])
+        keys_view = keys.view(query.shape[0] * query.shape[1], keys.shape[2], keys.shape[3])
+        vals_view = vals.view(query.shape[0] * query.shape[1], vals.shape[2], vals.shape[3])
 
-        query_view = query.view(x.shape[0] * 100, query.shape[2], query.shape[3])
-        keys_view = keys.view(x.shape[0] * 100, keys.shape[2], keys.shape[3])
-        vals_view = vals.view(x.shape[0] * 100, vals.shape[2], vals.shape[3])
 
         d = torch.bmm(query_view, torch.transpose(keys_view, 1, 2)) / self.sqrt_hidden_size
         alpha = self.softmax(d)
         weighted_values = torch.bmm(alpha, vals_view)
         output_view = torch.sum(weighted_values, 1)
-        x = output_view.view(x.shape[0], 100, output_view.shape[1])
+        x = output_view.view(x.shape[0], x.shape[1], output_view.shape[1])
 
         for layer_index in range(self.atten_layer_index, len(self.layers)):
             x = self.layers[layer_index](x)
