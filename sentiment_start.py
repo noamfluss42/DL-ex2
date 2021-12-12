@@ -194,7 +194,6 @@ class ExLRestSelfAtten(nn.Module):
         keys_view = keys.view(query.shape[0] * query.shape[1], keys.shape[2], keys.shape[3])
         vals_view = vals.view(query.shape[0] * query.shape[1], vals.shape[2], vals.shape[3])
 
-
         d = torch.bmm(query_view, torch.transpose(keys_view, 1, 2)) / self.sqrt_hidden_size
         alpha = self.softmax(d)
         weighted_values = torch.bmm(alpha, vals_view)
@@ -212,11 +211,9 @@ class ExLRestSelfAtten(nn.Module):
 
 def print_review(rev_text, sbs1, label, prediction):
     # implement #TODO smart coding
-
-    for word_index in range(len(rev_text)):
-        sub_scores = np.round(sbs1[word_index], 3)
-        print(
-            f"word: '{rev_text[word_index]}', sub-scores:, {sub_scores}")
+    scores = pd.DataFrame({'positive_score': np.round(sbs1[:,0],3), 'negative_score': np.round(sbs1[:,1],3)},index=rev_text)
+    print(scores)
+    scores.transpose().to_csv(f'{prediction==label}_score_table.csv')
     print("final predicted label", prediction, "true label:", label)
 
 
